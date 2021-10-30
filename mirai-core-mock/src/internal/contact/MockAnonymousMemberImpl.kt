@@ -36,15 +36,15 @@ internal class MockAnonymousMemberImpl(
     override var nameCard: String
 ) : AbstractMockContact(parentCoroutineContext, bot, id), MockAnonymousMember {
     override fun newMessagePreSend(message: Message): MessagePreSendEvent {
-        TODO("Not yet implemented")
+        error("Internal error")
     }
 
     override suspend fun postMessagePreSend(message: MessageChain, receipt: MessageReceipt<*>) {
-        TODO("Not yet implemented")
+        error("Internal error")
     }
 
     override fun newMessageSource(message: MessageChain): OnlineMessageSource.Outgoing {
-        TODO("Not yet implemented")
+        error("Internal error")
     }
 
     @Suppress("DEPRECATION", "DEPRECATION_ERROR")

@@ -74,7 +74,7 @@ public interface MockGroup : Group, MockContact {
      * 主动广播有新成员加入的事件
      */
     @MockBotDSL
-    public suspend fun broadcastNewMemberJoinEvent(
+    public suspend fun broadcastNewMemberJoinRequestEvent(
         requester: Long,
         requesterName: String,
         message: String,
@@ -90,8 +90,6 @@ public interface MockGroup : Group, MockContact {
             invitor.takeIf { it != 0L },
         ).broadcast()
     }
-
-    // TODO: broadcastNewMemberJoinRequestEvent
 }
 
 /** 添加一位成员, 该操作不会广播任何事件 */

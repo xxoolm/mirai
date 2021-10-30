@@ -176,7 +176,7 @@ internal class MockBotTest {
         val group = bot.addGroup(9875555515, "test")
 
         runAndReceiveEventBroadcast {
-            group.broadcastNewMemberJoinEvent(
+            group.broadcastNewMemberJoinRequestEvent(
                 100000000, "demo", "msg"
             ).accept()
         }.let { events ->
