@@ -9,10 +9,13 @@
 
 package net.mamoe.mirai.mock.database
 
+import net.mamoe.mirai.contact.Contact
+import net.mamoe.mirai.contact.roaming.RoamingMessageFilter
+import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.message.data.MessageSource
 import net.mamoe.mirai.message.data.MessageSourceKind
-import net.mamoe.mirai.mock.internal.db.MsgDatabaseImpl
 import net.mamoe.mirai.mock.MockBot
+import net.mamoe.mirai.mock.internal.db.MsgDatabaseImpl
 import net.mamoe.mirai.utils.toLongUnsigned
 
 /**
@@ -28,10 +31,19 @@ public interface MessageDatabase {
      * implementation note: 该方法可能同时被多个线程同时调用
      */
     public fun newMessageInfo(
-        sender: Long, subject: Long, kind: MessageSourceKind
+        sender: Long, subject: Long, kind: MessageSourceKind,
+        message: MessageChain,
     ): MessageInfo
 
     public fun queryMessageInfo(msgId: Long): MessageInfo?
+
+    public fun queryMessageInfosBy(
+        subject: Long, kind: MessageSourceKind,
+        contact: Contact,
+        timeStart: Long,
+        timeEnd: Long,
+        filter: RoamingMessageFilter
+    ): Sequence<MessageInfo>
 
     /**
      * implementation note: 该方法可能同时被多个线程同时调用
@@ -63,6 +75,7 @@ public data class MessageInfo(
     public val subject: Long,
     public val kind: MessageSourceKind,
     public val time: Long, // seconds
+    public val message: MessageChain,
 ) {
     // ids
     public val id1: Int get() = (msgId shr 32).toInt()

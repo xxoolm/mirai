@@ -188,7 +188,7 @@ internal class MockGroupImpl(
     }
 
     override fun newMessageSource(message: MessageChain): OnlineMessageSource.Outgoing {
-        return newMsgSrc(false) { ids, internalIds, time ->
+        return newMsgSrc(false, message) { ids, internalIds, time ->
             OnlineMsgSrcToGroup(ids, internalIds, time, message, bot, bot, this)
         }
     }

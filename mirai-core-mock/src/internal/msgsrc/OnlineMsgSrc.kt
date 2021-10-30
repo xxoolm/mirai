@@ -109,6 +109,7 @@ internal typealias MsgSrcConstructor<R> = (
 
 internal inline fun <R> AbstractMockContact.newMsgSrc(
     isSaying: Boolean,
+    messageChain: MessageChain,
     constructor: MsgSrcConstructor<R>,
 ): R {
     val db = bot.msgDatabase
@@ -119,7 +120,7 @@ internal inline fun <R> AbstractMockContact.newMsgSrc(
                 is Member -> group.id
                 is Stranger,
                 is Friend,
-                -> bot.id
+                -> this.id
                 else -> error("Invalid contact: $this")
             },
             kind = when (this) {
@@ -127,7 +128,8 @@ internal inline fun <R> AbstractMockContact.newMsgSrc(
                 is Stranger -> MessageSourceKind.STRANGER
                 is Friend -> MessageSourceKind.FRIEND
                 else -> error("Invalid contact: $this")
-            }
+            },
+            message = messageChain,
         )
     } else {
         db.newMessageInfo(
@@ -139,7 +141,8 @@ internal inline fun <R> AbstractMockContact.newMsgSrc(
                 is Friend -> MessageSourceKind.FRIEND
                 is Group -> MessageSourceKind.GROUP
                 else -> error("Invalid contact: $this")
-            }
+            },
+            message = messageChain,
         )
     }
     return constructor(

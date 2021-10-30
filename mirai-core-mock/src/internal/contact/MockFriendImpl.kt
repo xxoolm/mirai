@@ -11,9 +11,9 @@
 
 package net.mamoe.mirai.mock.internal.contact
 
-import net.mamoe.mirai.contact.roaming.RoamingMessages
 import kotlinx.coroutines.cancel
 import net.mamoe.mirai.contact.Friend
+import net.mamoe.mirai.contact.roaming.RoamingMessages
 import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.message.MessageReceipt
@@ -51,7 +51,7 @@ internal class MockFriendImpl(
     }
 
     override fun newMessageSource(message: MessageChain): OnlineMessageSource.Outgoing {
-        return newMsgSrc(false) { ids, internalIds, time ->
+        return newMsgSrc(false, message) { ids, internalIds, time ->
             OnlineMsgSrcToFriend(ids, internalIds, time, message, bot, bot, this)
         }
     }
@@ -73,7 +73,7 @@ internal class MockFriendImpl(
     override val roamingMessages: RoamingMessages = MockRoamingMessages(this)
 
     override suspend fun says(message: MessageChain): MessageChain {
-        val src = newMsgSrc(true) { ids, internalIds, time ->
+        val src = newMsgSrc(true, message) { ids, internalIds, time ->
             OnlineMsgSrcFromFriend(ids, internalIds, time, message, bot, this)
         }
         val msg = src withMessage message

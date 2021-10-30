@@ -43,7 +43,7 @@ internal class MockStrangerImpl(
     }
 
     override fun newMessageSource(message: MessageChain): OnlineMessageSource.Outgoing {
-        return newMsgSrc(false) { ids, internalIds, time ->
+        return newMsgSrc(false, message) { ids, internalIds, time ->
             OnlineMsgSrcToStranger(ids, internalIds, time, message, bot, bot, this)
         }
     }
@@ -60,7 +60,7 @@ internal class MockStrangerImpl(
     }
 
     override suspend fun says(message: MessageChain): MessageChain {
-        val src = newMsgSrc(true) { ids, internalIds, time ->
+        val src = newMsgSrc(true, message) { ids, internalIds, time ->
             OnlineMsgSrcFromStranger(ids, internalIds, time, message, bot, this)
         }
         val msg = src withMessage message

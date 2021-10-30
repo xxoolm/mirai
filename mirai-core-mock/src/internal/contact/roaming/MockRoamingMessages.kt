@@ -10,12 +10,20 @@
 package net.mamoe.mirai.mock.internal.contact.roaming
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.asFlow
+import net.mamoe.mirai.contact.Friend
+import net.mamoe.mirai.contact.Group
+import net.mamoe.mirai.contact.Stranger
 import net.mamoe.mirai.contact.roaming.RoamingMessageFilter
 import net.mamoe.mirai.contact.roaming.RoamingMessages
 import net.mamoe.mirai.contact.roaming.RoamingSupported
 import net.mamoe.mirai.message.data.MessageChain
+import net.mamoe.mirai.message.data.MessageSourceKind
+import net.mamoe.mirai.mock.internal.MockBotImpl
 import net.mamoe.mirai.utils.JavaFriendlyAPI
+import net.mamoe.mirai.utils.cast
 import java.util.stream.Stream
+import kotlin.streams.asStream
 
 internal class MockRoamingMessages(
     internal val contact: RoamingSupported,
@@ -25,7 +33,28 @@ internal class MockRoamingMessages(
         timeEnd: Long,
         filter: RoamingMessageFilter?
     ): Flow<MessageChain> {
-        TODO("Not yet implemented")
+        return getMsg(timeStart, timeEnd, filter).asFlow()
+    }
+
+    private fun getMsg(
+        timeStart: Long,
+        timeEnd: Long,
+        filter: RoamingMessageFilter?
+    ): Sequence<MessageChain> {
+        val msgDb = contact.bot.cast<MockBotImpl>().msgDatabase
+        return msgDb.queryMessageInfosBy(
+            contact.id,
+            when (contact) {
+                is Friend -> MessageSourceKind.FRIEND
+                is Group -> MessageSourceKind.GROUP
+                is Stranger -> MessageSourceKind.STRANGER
+                else -> error(contact.javaClass.toString())
+            },
+            contact,
+            timeStart,
+            timeEnd,
+            filter ?: RoamingMessageFilter.ANY
+        ).map { it.message }
     }
 
     @JavaFriendlyAPI
@@ -34,6 +63,6 @@ internal class MockRoamingMessages(
         timeEnd: Long,
         filter: RoamingMessageFilter?
     ): Stream<MessageChain> {
-        TODO()
+        return getMsg(timeStart, timeEnd, filter).asStream()
     }
 }

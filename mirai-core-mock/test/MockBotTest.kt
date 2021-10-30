@@ -20,6 +20,8 @@ import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.message.data.MessageSource.Key.recall
 import net.mamoe.mirai.message.data.OnlineMessageSource
+import net.mamoe.mirai.message.data.PlainText
+import net.mamoe.mirai.message.data.messageChainOf
 import net.mamoe.mirai.message.data.source
 import net.mamoe.mirai.mock.MockBotFactory
 import net.mamoe.mirai.mock.contact.MockNormalMember
@@ -30,6 +32,7 @@ import net.mamoe.mirai.mock.utils.*
 import net.mamoe.mirai.mock.utils.MockActions.mockFireRecalled
 import net.mamoe.mirai.mock.utils.MockActions.nudged
 import net.mamoe.mirai.mock.utils.MockActions.nudgedBy
+import net.mamoe.mirai.mock.utils.MockActions.says
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
@@ -403,6 +406,21 @@ internal class MockBotTest {
         }
         service.putUserProfile(1, profile)
         assertSame(profile, Mirai.queryProfile(bot, 1))
+    }
+
+    @Test
+    internal fun testRoamingMessages() = runBlocking<Unit> {
+        val mockFriend = bot.addFriend(1, "1")
+        mockFriend says { append("Testing!") }
+        mockFriend says { append("Test2!") }
+        mockFriend.sendMessage("Pong!")
+
+        mockFriend.roamingMessages.getAllMessages().toList().let { messages ->
+            assertEquals(3, messages.size)
+            assertEquals(messageChainOf(PlainText("Testing!")), messages[0])
+            assertEquals(messageChainOf(PlainText("Test2!")), messages[1])
+            assertEquals(messageChainOf(PlainText("Pong!")), messages[2])
+        }
     }
 
     //<editor-fold defaultstate="collapsed" desc="Utils">

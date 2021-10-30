@@ -10,6 +10,7 @@
 package net.mamoe.mirai.mock.test
 
 import net.mamoe.mirai.message.data.MessageSourceKind
+import net.mamoe.mirai.message.data.messageChainOf
 import net.mamoe.mirai.mock.database.MessageDatabase
 import net.mamoe.mirai.mock.database.MessageInfo
 import net.mamoe.mirai.mock.database.mockMsgDatabaseId
@@ -25,7 +26,8 @@ internal class MsgDbTest {
             val id2 = Random.nextInt()
             val msgInfo = MessageInfo(
                 msgId = mockMsgDatabaseId(id1, id2),
-                sender = 0, subject = 0, kind = MessageSourceKind.FRIEND, time = 0
+                sender = 0, subject = 0, kind = MessageSourceKind.FRIEND, time = 0,
+                messageChainOf()
             )
             assertEquals(id1, msgInfo.id1)
             assertEquals(id2, msgInfo.id2)
@@ -38,7 +40,7 @@ internal class MsgDbTest {
         db.connect()
 
         repeat(90) {
-            val info = db.newMessageInfo(Random.nextLong(), Random.nextLong(), MessageSourceKind.FRIEND)
+            val info = db.newMessageInfo(Random.nextLong(), Random.nextLong(), MessageSourceKind.FRIEND, messageChainOf())
             assertEquals(info, db.queryMessageInfo(info.msgId))
         }
 
