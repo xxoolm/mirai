@@ -23,7 +23,6 @@ import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.message.data.OnlineMessageSource
 import net.mamoe.mirai.mock.MockBot
 import net.mamoe.mirai.mock.contact.MockContact
-import net.mamoe.mirai.mock.utils.dropAndClose
 import net.mamoe.mirai.utils.*
 import kotlin.coroutines.CoroutineContext
 
@@ -75,7 +74,7 @@ internal abstract class AbstractMockContact(
 internal suspend inline fun <T : ExternalResource, R> T.inResource(action: () -> R): R {
     return useAutoClose {
         runBIO {
-            inputStream().dropAndClose()
+            inputStream().dropContentAndClose()
         }
         action()
     }

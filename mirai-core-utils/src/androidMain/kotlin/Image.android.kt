@@ -7,34 +7,37 @@
  * https://github.com/mamoe/mirai/blob/dev/LICENSE
  */
 
-@file:Suppress("FunctionName")
+@file:JvmMultifileClass
+@file:JvmName("MiraiUtils")
+@file:Suppress("NOTHING_TO_INLINE")
 
-package net.mamoe.mirai.mock.utils
+package net.mamoe.mirai.utils
 
-import java.awt.Color
-import java.awt.image.BufferedImage
+import android.graphics.Bitmap
 import java.io.ByteArrayOutputStream
-import javax.imageio.ImageIO
 
-
-public fun randomImage_awt_jvm(): BufferedImage {
+public fun randomImage_android(): Bitmap {
     val width = (500..800).random()
     val height = (500..800).random()
-    val image = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-    val graphics = image.createGraphics()
+    val bitmap = Bitmap.createBitmap(
+        width, height, Bitmap.Config.RGB_565
+    )
     for (x in 0 until width) {
         for (y in 0 until height) {
-            graphics.color = Color(
+            bitmap.setPixel(
+                x, y,
                 (0..0xFFFFFF).random()
             )
-            graphics.drawRect(x, y, 1, 1)
         }
     }
-    graphics.dispose()
-    return image
+    return bitmap
 }
 
-public fun BufferedImage.saveToBytes(): ByteArray = ByteArrayOutputStream().apply {
-    ImageIO.write(this@saveToBytes, "png", this)
+public fun Bitmap.saveToBytes(): ByteArray = ByteArrayOutputStream().also { output ->
+    compress(Bitmap.CompressFormat.PNG, 100, output)
 }.toByteArray()
+
+public actual fun randomImageContent(): ByteArray {
+    return randomImage_android().saveToBytes()
+}
 

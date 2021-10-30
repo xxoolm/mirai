@@ -12,9 +12,8 @@ package net.mamoe.mirai.mock.test
 import kotlinx.coroutines.runBlocking
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
 import net.mamoe.mirai.mock.MockBotFactory
-import net.mamoe.mirai.mock.utils.randomImage_awt_jvm
-import net.mamoe.mirai.mock.utils.saveToBytes
 import net.mamoe.mirai.utils.ExternalResource.Companion.toExternalResource
+import net.mamoe.mirai.utils.randomImageContent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
@@ -35,7 +34,7 @@ internal class ImageUploadTest {
 
     @Test
     fun testImageUpload() = runBlocking<Unit> {
-        val data = randomImage_awt_jvm().saveToBytes()
+        val data = randomImageContent()
         val img = bot.asFriend.uploadImage(
             data.toExternalResource().toAutoCloseable()
         )

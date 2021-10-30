@@ -7,30 +7,16 @@
  * https://github.com/mamoe/mirai/blob/dev/LICENSE
  */
 
-@file:Suppress(
-    "NOTHING_TO_INLINE",
-)
+@file:JvmMultifileClass
+@file:JvmName("MiraiUtils")
 
-package net.mamoe.mirai.mock.utils
+@file:Suppress("NOTHING_TO_INLINE")
 
-import java.io.InputStream
+package net.mamoe.mirai.utils
+
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
-
-
-public fun InputStream.dropAndClose(bufferSize: Int = 2048): Unit = use {
-    drop(bufferSize)
-}
-
-public fun InputStream.drop(bufferSize: Int = 2048) {
-    val buffer = ByteArray(bufferSize)
-    while (true) {
-        if (read(buffer) == -1) {
-            return
-        }
-    }
-}
 
 public val Path.isFile: Boolean get() = Files.exists(this) && !Files.isDirectory(this)
 
@@ -38,11 +24,10 @@ public inline fun Path.mkdir() {
     Files.createDirectory(this)
 }
 
-public fun Path.mkParentDir() {
+public fun Path.mkParentDirs() {
     val current = parent ?: return
     if (current == this) return
     if (current.exists()) return
-    current.mkParentDir()
+    current.mkParentDirs()
     current.mkdir()
 }
-

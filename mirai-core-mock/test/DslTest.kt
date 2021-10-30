@@ -13,6 +13,8 @@ import net.mamoe.mirai.contact.MemberPermission
 import net.mamoe.mirai.mock.MockBotFactory
 import net.mamoe.mirai.mock.addGroup
 import net.mamoe.mirai.mock.contact.addMember
+import net.mamoe.mirai.mock.utils.MockActions.nudged
+import net.mamoe.mirai.mock.utils.MockActions.nudgedBy
 import net.mamoe.mirai.mock.utils.MockActions.sayMessage
 import net.mamoe.mirai.mock.utils.group
 import net.mamoe.mirai.mock.utils.member
@@ -41,4 +43,19 @@ internal suspend fun dslTest() {
         File("helloworld.amr").toExternalResource().toAutoCloseable().mockUploadAsOnlineAudio(bot)
     }
 
+    bot.group(5).member(50).nudged(bot) {
+        action("拍了拍")
+        suffix("sys32")
+    }
+
+    bot.nudgedBy(bot.group(1).member(1)) {
+        action("拍了拍")
+        suffix("sys32")
+    }
+
+    bot.group(50).broadcastNewMemberJoinRequestEvent(
+        requester = 3,
+        requesterName = "Him188moe",
+        message = "Hi!",
+    ).reject(message = "Hello!")
 }

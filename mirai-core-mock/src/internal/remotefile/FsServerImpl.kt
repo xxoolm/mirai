@@ -15,7 +15,6 @@ import io.ktor.response.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import net.mamoe.mirai.mock.fsserver.TmpFsServer
-import net.mamoe.mirai.mock.utils.mkParentDir
 import net.mamoe.mirai.utils.*
 import java.io.IOException
 import java.net.ServerSocket
@@ -58,7 +57,7 @@ internal class FsServerImpl(
 
         logger.info { "Linking $source to $target" }
 
-        target.mkParentDir()
+        target.mkParentDirs()
         try {
             Files.createLink(target, source)
             logger.info { "Linked  $source to $target by Files.createLink" }
