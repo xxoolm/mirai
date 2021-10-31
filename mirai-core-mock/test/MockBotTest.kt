@@ -119,6 +119,59 @@ internal class MockBotTest {
     }
 
     @Test
+    internal fun testMockAvatarChange() = runBlocking<Unit> {
+        assertEquals("http://q1.qlogo.cn/g?b=qq&nk=${bot.id}&s=640", bot.avatarUrl)
+        runAndReceiveEventBroadcast {
+            bot.avatarUrl = "http://localhost/test.png"
+            assertEquals("http://localhost/test.png", bot.avatarUrl)
+        }.let { events ->
+            assertEquals(1, events.size)
+            assertIsInstance<BotAvatarChangedEvent>(events[0])
+        }
+    }
+
+    @Test
+    internal fun testNewFriendRequest() = runBlocking<Unit> {
+        runAndReceiveEventBroadcast {
+            bot.broadcastNewFriendRequestEvent(
+                1, "Hi", 0, "Hello!"
+            ).reject()
+        }.let { events ->
+            assertEquals(1, events.size)
+            assertIsInstance<NewFriendRequestEvent>(events[0]) {
+                assertEquals(1, fromId)
+                assertEquals("Hi", fromNick)
+                assertEquals(0, fromGroupId)
+                assertEquals("Hello!", message)
+            }
+            assertEquals(bot.friends.size, 0)
+        }
+
+        runAndReceiveEventBroadcast {
+            bot.broadcastNewFriendRequestEvent(
+                1, "Hi", 0, "Hello!"
+            ).accept()
+        }.let { events ->
+            assertEquals(2, events.size, events.toString())
+            assertIsInstance<NewFriendRequestEvent>(events[0]) {
+                assertEquals(1, fromId)
+                assertEquals("Hi", fromNick)
+                assertEquals(0, fromGroupId)
+                assertEquals("Hello!", message)
+            }
+
+            assertIsInstance<FriendAddEvent>(events[1]) {
+                assertEquals(1, friend.id)
+                assertEquals("Hi", friend.nick)
+                assertSame(friend, bot.getFriend(friend.id))
+            }
+
+            assertEquals(1, bot.friends.size)
+        }
+
+    }
+
+    @Test
     internal fun testMessageEventBroadcast() = runBlocking<Unit> {
         runAndReceiveEventBroadcast {
             bot.addGroup(5597122, "testing!")
@@ -380,7 +433,7 @@ internal class MockBotTest {
     }
 
     @Test
-    internal fun testGroupFile() = runBlocking<Unit> {
+    internal fun testGroupFileV1() = runBlocking<Unit> {
         val fsroot = bot.addGroup(5417, "58aw").filesRoot
         fsroot.resolve("helloworld.txt").uploadAndSend(
             "HelloWorld".toByteArray().toExternalResource().toAutoCloseable()

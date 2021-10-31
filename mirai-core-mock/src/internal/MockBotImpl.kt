@@ -16,13 +16,12 @@ import kotlinx.coroutines.isActive
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.Mirai
 import net.mamoe.mirai.contact.ContactList
+import net.mamoe.mirai.contact.ContactOrBot
 import net.mamoe.mirai.contact.MemberPermission
 import net.mamoe.mirai.event.EventChannel
 import net.mamoe.mirai.event.GlobalEventChannel
 import net.mamoe.mirai.event.broadcast
-import net.mamoe.mirai.event.events.BotEvent
-import net.mamoe.mirai.event.events.BotOnlineEvent
-import net.mamoe.mirai.event.events.BotReloginEvent
+import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.internal.network.component.ComponentStorage
 import net.mamoe.mirai.internal.network.component.ConcurrentComponentStorage
 import net.mamoe.mirai.internal.network.components.EventDispatcher
@@ -42,6 +41,7 @@ import net.mamoe.mirai.mock.internal.contact.mockImplUploadAudioAsOnline
 import net.mamoe.mirai.mock.internal.remotefile.FsServerImpl
 import net.mamoe.mirai.mock.userprofile.UserProfileService
 import net.mamoe.mirai.mock.utils.NameGenerator
+import net.mamoe.mirai.mock.utils.broadcastBlocking
 import net.mamoe.mirai.mock.utils.simpleMemberInfo
 import net.mamoe.mirai.utils.*
 import java.util.concurrent.CancellationException
@@ -52,13 +52,36 @@ import net.mamoe.mirai.internal.utils.subLoggerImpl as subLog
 internal class MockBotImpl(
     override val configuration: BotConfiguration,
     override val id: Long,
-    override val nick: String,
+    nick: String,
     override val nameGenerator: NameGenerator,
     override val tmpFsServer: TmpFsServer,
     override val msgDatabase: MessageDatabase,
     override val userProfileService: UserProfileService,
-) : MockBot {
+) : MockBot, Bot, ContactOrBot {
     private val loginBefore = AtomicBoolean(false)
+    override var nickNoEvent: String = nick
+    override var nick: String
+        get() = nickNoEvent
+        set(value) {
+            val ov = nickNoEvent
+            if (value == ov) return
+            nickNoEvent = value
+            BotNickChangedEvent(this, ov, value).broadcastBlocking()
+        }
+
+    override var avatarUrl: String = ""
+        get() {
+            val f = field
+            if (f.isEmpty()) {
+                @Suppress("QUALIFIED_SUPERTYPE_EXTENDED_BY_OTHER_SUPERTYPE", "RemoveExplicitSuperQualifier")
+                return super<ContactOrBot>.avatarUrl
+            }
+            return f
+        }
+        set(value) {
+            field = value
+            BotAvatarChangedEvent(this).broadcastBlocking()
+        }
 
     override val logger: MiraiLogger by lazy {
         configuration.botLoggerSupplier(this)
@@ -148,5 +171,9 @@ internal class MockBotImpl(
 
     override suspend fun uploadOnlineAudio(resource: ExternalResource): OnlineAudio {
         return resource.mockImplUploadAudioAsOnline(this)
+    }
+
+    override fun toString(): String {
+        return "MockBot<$nick, $id>"
     }
 }

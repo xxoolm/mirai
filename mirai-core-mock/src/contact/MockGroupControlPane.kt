@@ -30,6 +30,5 @@ public interface MockGroupControlPane {
 
     public var groupName: String
 
-
     public fun withActor(actor: MockNormalMember): MockGroupControlPane
 }

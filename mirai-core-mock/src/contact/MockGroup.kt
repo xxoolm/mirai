@@ -31,7 +31,8 @@ import kotlin.internal.LowPriorityInOverloadResolution
 import kotlin.random.Random
 
 @JvmBlockingBridge
-public interface MockGroup : Group, MockContact {
+public interface MockGroup : Group, MockContact, MockMsgSyncSupport {
+    /** @see net.mamoe.mirai.IMirai.getUin */
     public var uin: Long
     override val bot: MockBot
     override val members: ContactList<MockNormalMember>

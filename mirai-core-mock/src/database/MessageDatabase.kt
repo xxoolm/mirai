@@ -29,9 +29,12 @@ import net.mamoe.mirai.utils.toLongUnsigned
 public interface MessageDatabase {
     /**
      * implementation note: 该方法可能同时被多个线程同时调用
+     *
+     * @param time 单位秒
      */
     public fun newMessageInfo(
         sender: Long, subject: Long, kind: MessageSourceKind,
+        time: Long,
         message: MessageChain,
     ): MessageInfo
 

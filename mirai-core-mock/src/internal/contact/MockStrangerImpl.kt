@@ -31,9 +31,21 @@ internal class MockStrangerImpl(
     bot: MockBot,
     id: Long,
 
-    override var remark: String,
-    override var nick: String
+    remark: String,
+    nick: String
 ) : AbstractMockContact(parentCoroutineContext, bot, id), MockStranger {
+
+    override val mockApi: MockStranger.MockApi = object : MockStranger.MockApi {
+        override val contact: MockStranger get() = this@MockStrangerImpl
+        override var nick: String = nick
+        override var remark: String = remark
+    }
+
+    override val nick: String
+        get() = mockApi.nick
+    override val remark: String
+        get() = mockApi.remark
+
     override fun newMessagePreSend(message: Message): MessagePreSendEvent {
         return StrangerMessagePreSendEvent(this, message)
     }

@@ -124,7 +124,8 @@ internal class MockMiraiImpl : MiraiImpl() {
     ) {
         if (!accept) return
 
-        FriendAddEvent(bot.mock().addFriend(fromId, fromNick)).broadcast()
+        // No event broadcast in mirai-core
+        bot.mock().addFriend(fromId, fromNick)
     }
 
     override fun getUin(contactOrBot: ContactOrBot): Long {

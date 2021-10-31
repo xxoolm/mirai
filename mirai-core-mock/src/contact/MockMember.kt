@@ -16,17 +16,17 @@ import net.mamoe.mirai.mock.MockBotDSL
 
 @JvmBlockingBridge
 public interface MockMember : Member, MockContact, MockUser {
-    override var nick: String
-    override var remark: String
+    public interface MockApi {
+        public val member: MockMember
+        public var nick: String
+        public var remark: String
+        public var permission: MemberPermission
+    }
+
     override val group: MockGroup
 
-    // Mock api, no event broadcast
-    override var permission: MemberPermission
-
-    @MockBotDSL
-    public fun setNameCardNoEventBroadcast(value: String)
-
-    @MockBotDSL
-    public fun setSpecialTitleNoEventBroadcast(value: String)
-
+    /**
+     * 获取直接修改字段内容的 API, 通过该 API 修改的值都不会触发广播
+     */
+    public val mockApi: MockApi
 }

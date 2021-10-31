@@ -14,20 +14,32 @@ import net.mamoe.mirai.contact.Friend
 import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.BotInvitedJoinGroupRequestEvent
 import net.mamoe.mirai.event.events.FriendAddEvent
+import net.mamoe.mirai.event.events.FriendInputStatusChangedEvent
+import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.mock.MockBotDSL
-import net.mamoe.mirai.mock.utils.MockActions
-import net.mamoe.mirai.mock.utils.MockActions.nickChangesTo
 import kotlin.random.Random
 
 @JvmBlockingBridge
-public interface MockFriend : Friend, MockContact, MockUser {
+public interface MockFriend : Friend, MockContact, MockUser, MockMsgSyncSupport {
+    public interface MockApi {
+        val contact: MockFriend
+        var nick: String
+        var remark: String
+    }
+
     /**
-     * 直接修改 nick, 不会有事件广播
-     * @see [MockActions.nickChangesTo]
+     * 获取直接修改字段内容的 API, 通过该 API 修改的值都不会触发广播
+     */
+    public val mockApi: MockApi
+
+    /**
+     * 修改 nick 同时广播相关事件
      */
     override var nick: String
 
-    /** 直接修改 remark, 不会有事件广播 */
+    /**
+     * 修改 remark 同时广播相关事件
+     */
     override var remark: String
 
     /**
@@ -64,5 +76,13 @@ public interface MockFriend : Friend, MockContact, MockUser {
     @MockBotDSL
     public suspend fun broadcastFriendDelete() {
         delete()
+    }
+
+    /**
+     * 广播好友输入状态改变事件
+     */
+    @MockBotDSL
+    public suspend fun broadcastFriendInputStateChange(inputting: Boolean) {
+        FriendInputStatusChangedEvent(this, inputting).broadcast()
     }
 }

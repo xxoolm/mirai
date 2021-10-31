@@ -40,7 +40,7 @@ internal class MsgDbTest {
         db.connect()
 
         repeat(90) {
-            val info = db.newMessageInfo(Random.nextLong(), Random.nextLong(), MessageSourceKind.FRIEND, messageChainOf())
+            val info = db.newMessageInfo(Random.nextLong(), Random.nextLong(), MessageSourceKind.FRIEND, 0, messageChainOf())
             assertEquals(info, db.queryMessageInfo(info.msgId))
         }
 

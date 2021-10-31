@@ -18,6 +18,7 @@ import net.mamoe.mirai.message.data.Message
 import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.message.data.OnlineMessageSource
 import net.mamoe.mirai.mock.MockBot
+import net.mamoe.mirai.mock.contact.MockFriend
 import net.mamoe.mirai.mock.contact.MockGroup
 import net.mamoe.mirai.mock.contact.MockNormalMember
 import net.mamoe.mirai.mock.internal.msgsrc.OnlineMsgSrcFromGroup
@@ -28,18 +29,19 @@ import net.mamoe.mirai.utils.cast
 import net.mamoe.mirai.utils.currentTimeSeconds
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.math.max
 
 internal class MockNormalMemberImpl(
     parentCoroutineContext: CoroutineContext,
     bot: MockBot,
     id: Long,
     override val group: MockGroup,
-    override var permission: MemberPermission,
-    override var remark: String,
+    permission: MemberPermission,
+    remark: String,
     nick: String,
-    override var muteTimeRemaining: Int,
-    override var joinTimestamp: Int,
-    override var lastSpeakTimestamp: Int,
+    muteTimeRemaining: Int,
+    joinTimestamp: Int,
+    lastSpeakTimestamp: Int,
     specialTitle: String,
     nameCard: String,
 ) : AbstractMockContact(
@@ -47,49 +49,79 @@ internal class MockNormalMemberImpl(
     id
 ), MockNormalMember {
 
-    private var _specialTitle: String = specialTitle
-    private var _nameCard: String = nameCard
+    private inline fun <T> crossFriendAccess(
+        ifExists: (MockFriend) -> T,
+        ifNotExists: () -> T,
+    ): T {
+        val f = bot.getFriend(id) ?: return ifNotExists()
+        return ifExists(f)
+    }
+
+    override val mockApi: MockNormalMember.MockApi = object : MockNormalMember.MockApi {
+        override val member: MockNormalMember get() = this@MockNormalMemberImpl
+        override var lastSpeakTimestamp: Int = lastSpeakTimestamp
+        override var joinTimestamp: Int = joinTimestamp
+        override var muteTimeEndTimestamp: Long = currentTimeSeconds() + muteTimeRemaining
+
+        override var nick: String = nick
+            get() = crossFriendAccess(ifExists = { it.nick }, ifNotExists = { field })
+            set(value) {
+                crossFriendAccess(ifExists = { it.mockApi.nick = value }, ifNotExists = { field = value })
+            }
+
+        override var remark: String = remark
+            get() = crossFriendAccess(ifExists = { it.remark }, ifNotExists = { field })
+            set(value) {
+                crossFriendAccess(ifExists = { it.mockApi.remark = value }, ifNotExists = { field = value })
+            }
+
+        override var permission: MemberPermission = permission
+        override var nameCard: String = nameCard
+        override var specialTitle: String = specialTitle
+    }
+
+    override val permission: MemberPermission
+        get() = mockApi.permission
+
+    override val joinTimestamp: Int
+        get() = mockApi.joinTimestamp
+
+    override val lastSpeakTimestamp: Int
+        get() = mockApi.lastSpeakTimestamp
+
+    override val muteTimeRemaining: Int
+        get() = max((currentTimeSeconds() - mockApi.muteTimeEndTimestamp).toInt(), 0)
+
+    override val remark: String
+        get() = mockApi.remark
 
     override var nameCard: String
-        get() = _nameCard
+        get() = mockApi.nameCard
         set(value) {
             if (!group.botPermission.isOperator()) {
                 throw PermissionDeniedException("Bot don't have permission to change the namecard of $this")
             }
-            MemberCardChangeEvent(_nameCard, value, this).broadcastBlocking()
-            _nameCard = value
+            MemberCardChangeEvent(mockApi.nameCard, value, this).broadcastBlocking()
+            mockApi.nameCard = value
         }
+
     override var specialTitle: String
-        get() = _specialTitle
+        get() = mockApi.specialTitle
         set(value) {
             if (group.botPermission != MemberPermission.OWNER) {
                 throw PermissionDeniedException("Bot is not the owner of $group so bot cannot change the specialTitle of $this")
             }
-            MemberSpecialTitleChangeEvent(_specialTitle, value, this, group.botAsMember).broadcastBlocking()
-            _specialTitle = value
+            MemberSpecialTitleChangeEvent(mockApi.specialTitle, value, this, group.botAsMember).broadcastBlocking()
+            mockApi.specialTitle = value
         }
 
-    override var nick: String = nick
-        set(value) {
-            val friend0 = bot.getFriend(id)
-            if (friend0 != null) {
-                friend0.nick = value
-            } else {
-                field = value
-            }
-        }
-
-    override fun setNameCardNoEventBroadcast(value: String) {
-        _nameCard = value
-    }
-
-    override fun setSpecialTitleNoEventBroadcast(value: String) {
-        _specialTitle = value
-    }
+    override val nick: String
+        get() = mockApi.nick
 
     override suspend fun unmute() {
         requireBotPermissionHigherThanThis("unmute")
-        muteTimeRemaining = 0
+        mockApi.muteTimeEndTimestamp = 0
+        MemberUnmuteEvent(this, null)
     }
 
     override suspend fun kick(message: String, block: Boolean) {
@@ -116,7 +148,7 @@ internal class MockNormalMemberImpl(
         val newPerm = if (operation) MemberPermission.ADMINISTRATOR else MemberPermission.MEMBER
         if (newPerm != permission) {
             val oldPerm = permission
-            permission = oldPerm
+            mockApi.permission = oldPerm
             MemberPermissionChangeEvent(this, oldPerm, newPerm).broadcast()
         }
     }
@@ -130,11 +162,30 @@ internal class MockNormalMemberImpl(
         require(durationSeconds > 0) {
             "$durationSeconds < 0"
         }
-        muteTimeRemaining = currentTimeSeconds().toInt() + durationSeconds
+        mockApi.muteTimeEndTimestamp = currentTimeSeconds() + durationSeconds
+        MemberMuteEvent(this, durationSeconds, null)
+    }
+
+    override suspend fun broadcastMute(target: MockNormalMember, durationSeconds: Int) {
+        target.mockApi.muteTimeEndTimestamp = currentTimeSeconds() + durationSeconds
+        if (target.id == bot.id) {
+            if (durationSeconds == 0) {
+                BotUnmuteEvent(this)
+            } else {
+                BotMuteEvent(durationSeconds, this)
+            }
+        } else {
+            if (durationSeconds == 0) {
+                MemberUnmuteEvent(target, this)
+            } else {
+                MemberMuteEvent(target, durationSeconds, this)
+            }
+        }.broadcast()
     }
 
     override suspend fun says(message: MessageChain): MessageChain {
         val src = newMsgSrc(true, message) { ids, internalIds, time ->
+            mockApi.lastSpeakTimestamp = time
             OnlineMsgSrcFromGroup(ids, internalIds, time, message, bot, this)
         }
         val msg = src withMessage message

@@ -15,6 +15,7 @@ import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.message.data.MessageSourceKind
 import net.mamoe.mirai.message.data.OnlineMessageSource
 import net.mamoe.mirai.mock.internal.contact.AbstractMockContact
+import net.mamoe.mirai.utils.currentTimeSeconds
 
 internal class OnlineMsgSrcToGroup(
     override val ids: IntArray,
@@ -110,6 +111,7 @@ internal typealias MsgSrcConstructor<R> = (
 internal inline fun <R> AbstractMockContact.newMsgSrc(
     isSaying: Boolean,
     messageChain: MessageChain,
+    time: Long = currentTimeSeconds(),
     constructor: MsgSrcConstructor<R>,
 ): R {
     val db = bot.msgDatabase
@@ -130,6 +132,7 @@ internal inline fun <R> AbstractMockContact.newMsgSrc(
                 else -> error("Invalid contact: $this")
             },
             message = messageChain,
+            time = time,
         )
     } else {
         db.newMessageInfo(
@@ -143,6 +146,7 @@ internal inline fun <R> AbstractMockContact.newMsgSrc(
                 else -> error("Invalid contact: $this")
             },
             message = messageChain,
+            time = time,
         )
     }
     return constructor(

@@ -33,6 +33,7 @@ internal class MsgDatabaseImpl : MessageDatabase {
     override fun newMessageInfo(
         sender: Long, subject: Long,
         kind: MessageSourceKind,
+        time: Long,
         message: MessageChain,
     ): MessageInfo {
         val dbid = mockMsgDatabaseId(idCounter1.getAndIncrement(), idCounter2.getAndDecrement())
@@ -41,7 +42,7 @@ internal class MsgDatabaseImpl : MessageDatabase {
             sender = sender,
             subject = subject,
             kind = kind,
-            time = currentTimeSeconds(),
+            time = time,
             message = message,
         )
         db.add(info)

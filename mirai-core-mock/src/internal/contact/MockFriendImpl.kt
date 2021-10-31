@@ -27,6 +27,7 @@ import net.mamoe.mirai.mock.internal.contact.roaming.MockRoamingMessages
 import net.mamoe.mirai.mock.internal.msgsrc.OnlineMsgSrcFromFriend
 import net.mamoe.mirai.mock.internal.msgsrc.OnlineMsgSrcToFriend
 import net.mamoe.mirai.mock.internal.msgsrc.newMsgSrc
+import net.mamoe.mirai.mock.utils.broadcastBlocking
 import net.mamoe.mirai.utils.ExternalResource
 import net.mamoe.mirai.utils.cast
 import java.util.concurrent.CancellationException
@@ -36,12 +37,37 @@ internal class MockFriendImpl(
     parentCoroutineContext: CoroutineContext,
     bot: MockBot,
     id: Long,
-    override var nick: String,
-    override var remark: String
+    nick: String,
+    remark: String
 ) : AbstractMockContact(
     parentCoroutineContext,
     bot, id
 ), MockFriend {
+    override val mockApi: MockFriend.MockApi = object : MockFriend.MockApi {
+        override val contact: MockFriend get() = this@MockFriendImpl
+
+        override var nick: String = nick
+        override var remark: String = remark
+    }
+
+    override var nick: String
+        get() = mockApi.nick
+        set(value) {
+            val ov = mockApi.nick
+            if (ov == value) return
+            mockApi.nick = value
+            FriendNickChangedEvent(this, ov, value).broadcastBlocking()
+        }
+
+    override var remark: String
+        get() = mockApi.remark
+        set(value) {
+            val ov = mockApi.remark
+            if (ov == value) return
+            mockApi.remark = value
+            FriendRemarkChangeEvent(this, ov, value).broadcastBlocking()
+        }
+
     override fun newMessagePreSend(message: Message): MessagePreSendEvent {
         return FriendMessagePreSendEvent(this, message)
     }
@@ -79,6 +105,14 @@ internal class MockFriendImpl(
         val msg = src withMessage message
         FriendMessageEvent(this, msg, src.time).broadcast()
         return msg
+    }
+
+    override suspend fun broadcastMsgSyncEvent(message: MessageChain, time: Int) {
+        val src = newMsgSrc(true, message, time.toLong()) { ids, internalIds, time0 ->
+            OnlineMsgSrcToFriend(ids, internalIds, time0, message, bot, bot, this)
+        }
+        val msg = src withMessage message
+        FriendMessageSyncEvent(this, msg, time).broadcast()
     }
 
     override fun toString(): String {

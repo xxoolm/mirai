@@ -22,6 +22,7 @@ import net.mamoe.mirai.message.data.OnlineMessageSource
 import net.mamoe.mirai.mock.MockBot
 import net.mamoe.mirai.mock.contact.MockAnonymousMember
 import net.mamoe.mirai.mock.contact.MockGroup
+import net.mamoe.mirai.mock.contact.MockMember
 import net.mamoe.mirai.mock.internal.msgsrc.OnlineMsgSrcFromGroup
 import net.mamoe.mirai.mock.internal.msgsrc.newMsgSrc
 import net.mamoe.mirai.utils.ExternalResource
@@ -33,18 +34,18 @@ internal class MockAnonymousMemberImpl(
 
     override val anonymousId: String,
     override val group: MockGroup,
-    override var nameCard: String
+    nameCard: String
 ) : AbstractMockContact(parentCoroutineContext, bot, id), MockAnonymousMember {
     override fun newMessagePreSend(message: Message): MessagePreSendEvent {
-        error("Internal error")
+        throw AssertionError()
     }
 
     override suspend fun postMessagePreSend(message: MessageChain, receipt: MessageReceipt<*>) {
-        error("Internal error")
+        throw AssertionError()
     }
 
     override fun newMessageSource(message: MessageChain): OnlineMessageSource.Outgoing {
-        error("Internal error")
+        throw AssertionError()
     }
 
     @Suppress("DEPRECATION", "DEPRECATION_ERROR")
@@ -70,13 +71,24 @@ internal class MockAnonymousMemberImpl(
         get() = nameCard
         set(value) {}
 
-    override fun setNameCardNoEventBroadcast(value: String) {
-        nameCard = value
+    override val nameCard: String
+        get() = mockApi.nick
+
+    override val mockApi: MockMember.MockApi = object : MockMember.MockApi {
+        override val member: MockMember
+            get() = this@MockAnonymousMemberImpl
+
+        override var nick: String = nameCard
+
+        override var remark: String
+            get() = ""
+            set(value) {}
+
+        override var permission: MemberPermission
+            get() = MemberPermission.MEMBER
+            set(value) {}
     }
 
-    override fun setSpecialTitleNoEventBroadcast(value: String) {
-        // noop for anonymous
-    }
 
     override suspend fun says(message: MessageChain): MessageChain {
         val src = newMsgSrc(true, message) { ids, internalIds, time ->

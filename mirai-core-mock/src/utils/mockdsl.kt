@@ -18,6 +18,7 @@ import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.*
 import net.mamoe.mirai.message.MessageReceipt
 import net.mamoe.mirai.message.data.*
+import net.mamoe.mirai.mock.MockBot
 import net.mamoe.mirai.mock.MockBotDSL
 import net.mamoe.mirai.mock.contact.*
 import net.mamoe.mirai.mock.database.removeMessageInfo
@@ -39,15 +40,16 @@ public object MockActions {
      */
     @JvmStatic
     @JvmName("fireNickChanged")
+    @MockActionsDsl
     public suspend infix fun MockUserOrBot.nickChangesTo(value: String) {
         when (this) {
             is MockFriend -> {
                 val ov = this.nick
-                this.nick = value
+                this.mockApi.nick = value
                 FriendNickChangedEvent(this, ov, nick).broadcast()
             }
             is MockStranger -> {
-                this.nick = value
+                this.mockApi.nick = value
                 // TODO: StrangerNickChangedEvent
             }
             is MockNormalMember -> {
@@ -55,6 +57,9 @@ public object MockActions {
                 if (friend0 != null) {
                     return friend0.nickChangesTo(value)
                 }
+                this.mockApi.nick = value
+            }
+            is MockBot -> {
                 this.nick = value
             }
         }
@@ -65,9 +70,10 @@ public object MockActions {
      */
     @JvmStatic
     @JvmName("fireNameCardChanged")
+    @MockActionsDsl
     public suspend infix fun MockNormalMember.nameCardChangesTo(value: String) {
         val ov = this.nameCard
-        setNameCardNoEventBroadcast(value)
+        mockApi.nameCard = value
         MemberCardChangeEvent(ov, value, this).broadcast()
     }
 
@@ -76,9 +82,10 @@ public object MockActions {
      */
     @JvmStatic
     @JvmName("fireSpecialTitleChanged")
+    @MockActionsDsl
     public suspend infix fun MockNormalMember.specialTitleChangesTo(value: String) {
         val ov = specialTitle
-        setSpecialTitleNoEventBroadcast(value)
+        mockApi.specialTitle = value
         MemberSpecialTitleChangeEvent(
             ov,
             value,
@@ -92,13 +99,18 @@ public object MockActions {
      */
     @JvmStatic
     @JvmName("firePermissionChanged")
+    @MockActionsDsl
     public suspend infix fun MockNormalMember.permissionChangesTo(perm: MemberPermission) {
         if (perm == MemberPermission.OWNER || this == group.owner) {
             error("Use group.changeOwner to modify group owner")
         }
         val ov = permission
-        this.permission = perm
-        MemberPermissionChangeEvent(this, ov, perm).broadcast()
+        mockApi.permission = perm
+        if (id == bot.id) {
+            BotGroupPermissionChangeEvent(group, ov, perm)
+        } else {
+            MemberPermissionChangeEvent(this, ov, perm)
+        }.broadcast()
     }
 
     /**

@@ -79,7 +79,7 @@ internal class MockGroupImpl(
 
         if (nMember.permission == MemberPermission.OWNER) {
             if (::owner.isInitialized) {
-                owner.mock().permission = MemberPermission.MEMBER
+                owner.mock().mockApi.permission = MemberPermission.MEMBER
             }
             owner = nMember
         }
@@ -89,8 +89,8 @@ internal class MockGroupImpl(
     override suspend fun changeOwner(member: NormalMember) {
         val oldOwner = owner
         val oldPerm = member.permission
-        member.mock().permission = MemberPermission.OWNER
-        oldOwner.mock().permission = MemberPermission.MEMBER
+        member.mock().mockApi.permission = MemberPermission.OWNER
+        oldOwner.mock().mockApi.permission = MemberPermission.MEMBER
         owner = member
 
         if (member === botAsMember) {
@@ -108,8 +108,8 @@ internal class MockGroupImpl(
 
     override fun changeOwnerNoEventBroadcast(member: NormalMember) {
         val oldOwner = owner
-        member.mock().permission = MemberPermission.OWNER
-        oldOwner.permission = MemberPermission.MEMBER
+        member.mock().mockApi.permission = MemberPermission.OWNER
+        oldOwner.mockApi.permission = MemberPermission.MEMBER
         owner = member
     }
 
@@ -282,6 +282,14 @@ internal class MockGroupImpl(
         return newMsgSrc(false, message) { ids, internalIds, time ->
             OnlineMsgSrcToGroup(ids, internalIds, time, message, bot, bot, this)
         }
+    }
+
+    override suspend fun broadcastMsgSyncEvent(message: MessageChain, time: Int) {
+        val src = newMsgSrc(true, message, time.toLong()) { ids, internalIds, time0 ->
+            OnlineMsgSrcToGroup(ids, internalIds, time0, message, bot, bot, this)
+        }
+        val msg = src withMessage message
+        GroupMessageSyncEvent(this, msg, botAsMember, bot.nick, time).broadcast()
     }
 
     override suspend fun sendMessage(message: Message): MessageReceipt<Group> {

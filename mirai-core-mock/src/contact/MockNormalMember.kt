@@ -17,14 +17,28 @@ import net.mamoe.mirai.event.events.BotLeaveEvent
 import net.mamoe.mirai.event.events.MemberJoinEvent
 import net.mamoe.mirai.event.events.MemberLeaveEvent
 import net.mamoe.mirai.mock.MockBotDSL
+import net.mamoe.mirai.mock.utils.broadcastBlocking
 import java.util.concurrent.CancellationException
 
 @JvmBlockingBridge
 public interface MockNormalMember : NormalMember, MockMember {
-    // Mock api, no event broadcast
-    override var lastSpeakTimestamp: Int
-    override var joinTimestamp: Int
-    override var muteTimeRemaining: Int
+    public interface MockApi : MockMember.MockApi {
+        override val member: MockNormalMember
+        var lastSpeakTimestamp: Int
+        var joinTimestamp: Int
+        var nameCard: String
+        var specialTitle: String
+
+        /**
+         * 单位 秒
+         */
+        var muteTimeEndTimestamp: Long
+    }
+
+    /**
+     * 获取直接修改字段内容的 API, 通过该 API 修改的值都不会触发广播
+     */
+    override val mockApi: MockApi
 
     /**
      * 广播该成员加入了群
@@ -69,4 +83,23 @@ public interface MockNormalMember : NormalMember, MockMember {
             cancel(CancellationException("Bot was kicked"))
         }
     }
+
+    /**
+     * 广播 该群成员被 [actor] 踢出
+     */
+    @MockBotDSL
+    public suspend fun broadcastKickedBy(actor: MockNormalMember) {
+        if (group.members.delegate.remove(this)) {
+            MemberLeaveEvent.Kick(this, actor).broadcastBlocking()
+            cancel(CancellationException("Member $id kicked"))
+        }
+    }
+
+    /**
+     * 广播该群员 禁言了 [target]
+     *
+     * @param durationSeconds 0为取消禁言
+     */
+    @MockBotDSL
+    public suspend fun broadcastMute(target: MockNormalMember, durationSeconds: Int)
 }

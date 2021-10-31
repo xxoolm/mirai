@@ -14,6 +14,10 @@ package net.mamoe.mirai.mock
 import net.mamoe.kjbb.JvmBlockingBridge
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.contact.ContactList
+import net.mamoe.mirai.event.broadcast
+import net.mamoe.mirai.event.events.BotAvatarChangedEvent
+import net.mamoe.mirai.event.events.BotOfflineEvent
+import net.mamoe.mirai.event.events.NewFriendRequestEvent
 import net.mamoe.mirai.message.data.OnlineAudio
 import net.mamoe.mirai.mock.contact.*
 import net.mamoe.mirai.mock.database.MessageDatabase
@@ -27,11 +31,31 @@ import java.util.function.Consumer
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 import kotlin.internal.LowPriorityInOverloadResolution
+import kotlin.random.Random
 
 @Suppress("unused")
 @JvmBlockingBridge
 public interface MockBot : Bot, MockContactOrBot, MockUserOrBot {
     override val bot: MockBot get() = this
+
+    /**
+     * bot 昵称, 访问此字段时与 [nick] 一致
+     * 修改此字段时不会广播事件
+     */
+    @MockBotDSL
+    var nickNoEvent: String
+
+    /**
+     * bot 昵称
+     *
+     * 修改此字段时会广播事件
+     */
+    override var nick: String
+
+    /**
+     * Bot 头像, 可自定义, 修改时会广播 [BotAvatarChangedEvent]
+     */
+    override var avatarUrl: String
 
     /// Contract API override
     @MockBotDSL
@@ -90,6 +114,38 @@ public interface MockBot : Bot, MockContactOrBot, MockUserOrBot {
 
     @MockBotDSL
     public suspend fun uploadOnlineAudio(resource: ExternalResource): OnlineAudio
+
+    @MockBotDSL
+    public suspend fun broadcastOfflineEvent() {
+        BotOfflineEvent.Dropped(this, java.net.SocketException("socket closed")).broadcast()
+    }
+
+    @MockBotDSL
+    public suspend fun broadcastAvatarChangeEvent() {
+        BotAvatarChangedEvent(this).broadcast()
+    }
+
+    /**
+     * 广播新好友添加事件
+     *
+     * @see NewFriendRequestEvent
+     */
+    @MockBotDSL
+    public suspend fun broadcastNewFriendRequestEvent(
+        requester: Long,
+        requesterNick: String,
+        fromGroup: Long,
+        message: String
+    ): NewFriendRequestEvent {
+        return NewFriendRequestEvent(
+            this,
+            eventId = Random.nextLong(),
+            fromId = requester,
+            fromGroupId = fromGroup,
+            message = message,
+            fromNick = requesterNick
+        ).broadcast()
+    }
 }
 
 @MockBotDSL
