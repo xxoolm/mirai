@@ -11,12 +11,14 @@ package net.mamoe.mirai.mock.contact.announcement
 
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.contact.NormalMember
+import net.mamoe.mirai.contact.announcement.Announcement
 import net.mamoe.mirai.contact.announcement.AnnouncementParameters
 import net.mamoe.mirai.contact.announcement.Announcements
 import net.mamoe.mirai.contact.announcement.OnlineAnnouncement
 import net.mamoe.mirai.utils.MiraiInternalApi
 
 public interface MockAnnouncements : Announcements {
+    public fun publish0(announcement: Announcement): OnlineAnnouncement
 }
 
 public data class MockOnlineAnnouncement @MiraiInternalApi public constructor(

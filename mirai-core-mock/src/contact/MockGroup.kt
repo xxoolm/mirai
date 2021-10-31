@@ -18,8 +18,6 @@ import net.mamoe.mirai.contact.NormalMember
 import net.mamoe.mirai.data.MemberInfo
 import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.MemberJoinRequestEvent
-import net.mamoe.mirai.message.data.Message
-import net.mamoe.mirai.message.data.MessageChain
 import net.mamoe.mirai.mock.MockBot
 import net.mamoe.mirai.mock.MockBotDSL
 import net.mamoe.mirai.mock.contact.announcement.MockAnnouncements
@@ -40,6 +38,14 @@ public interface MockGroup : Group, MockContact {
     override val owner: MockNormalMember
     override val botAsMember: MockNormalMember
     override val announcements: MockAnnouncements
+
+    /**
+     * 获取群控制面板
+     *
+     * 注, 通过本属性获取的控制面板为原始数据存储面板, 修改并不会广播相关事件, 如果需要广播事件,
+     * 请使用 [MockGroupControlPane.withActor]
+     */
+    public val controlPane: MockGroupControlPane
 
     /** 添加一位成员, 该操作不会广播任何事件 */
     @MockBotDSL

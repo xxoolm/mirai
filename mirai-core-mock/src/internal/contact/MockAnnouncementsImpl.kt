@@ -48,7 +48,8 @@ internal class MockAnnouncementsImpl(
         annoc.group = group
     }
 
-    override suspend fun publish(announcement: Announcement): OnlineAnnouncement {
+    override fun publish0(announcement: Announcement): OnlineAnnouncement {
+        // TODO: GroupEntranceAnnouncementChangeEvent
         val onac = MockOnlineAnnouncement(
             content = announcement.content,
             parameters = announcement.parameters,
@@ -60,6 +61,11 @@ internal class MockAnnouncementsImpl(
         )
         putDirect(onac)
         return onac
+    }
+
+    override suspend fun publish(announcement: Announcement): OnlineAnnouncement {
+        // TODO: CheckPermission
+        return publish0(announcement)
     }
 
     override suspend fun uploadImage(resource: ExternalResource): AnnouncementImage = resource.inResource {
