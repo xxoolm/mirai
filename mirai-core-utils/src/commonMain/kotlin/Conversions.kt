@@ -14,6 +14,8 @@
 
 package net.mamoe.mirai.utils
 
+import kotlin.experimental.and
+
 /*
  * 类型转换 Utils.
  * 这些函数为内部函数, 可能会改变
@@ -137,6 +139,19 @@ public fun ByteArray.toInt(): Int =
         .and(255) shl 8) + (this[3].toInt().and(
         255
     ) shl 0)
+
+public fun ByteArray.toLong(): Long {
+    var rsp: Long = 0
+    rsp += this[0].toLong().and(255).shl(56)
+    rsp += this[1].toLong().and(255).shl(48)
+    rsp += this[2].toLong().and(255).shl(40)
+    rsp += this[3].toLong().and(255).shl(32)
+    rsp += this[4].toLong().and(255).shl(24)
+    rsp += this[5].toLong().and(255).shl(16)
+    rsp += this[6].toLong().and(255).shl(8)
+    rsp += this[7].toLong().and(255).shl(0)
+    return rsp
+}
 
 
 ///////////////////////////////////////////////////////////////////////////

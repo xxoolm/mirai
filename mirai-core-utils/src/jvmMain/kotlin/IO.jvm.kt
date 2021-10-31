@@ -16,12 +16,19 @@ package net.mamoe.mirai.utils
 
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.exists
+import kotlin.io.path.isDirectory
+import kotlin.io.path.listDirectoryEntries
 
 public val Path.isFile: Boolean get() = Files.exists(this) && !Files.isDirectory(this)
 
 public inline fun Path.mkdir() {
     Files.createDirectory(this)
+}
+
+public inline fun Path.mkdirs() {
+    Files.createDirectories(this)
 }
 
 public fun Path.mkParentDirs() {
@@ -30,4 +37,13 @@ public fun Path.mkParentDirs() {
     if (current.exists()) return
     current.mkParentDirs()
     current.mkdir()
+}
+
+public fun Path.deleteRecursively(): Boolean {
+    if (isFile) return deleteIfExists()
+    if (isDirectory()) {
+        listDirectoryEntries().forEach { it.deleteRecursively() }
+        return deleteIfExists()
+    }
+    return false
 }

@@ -13,6 +13,7 @@ package net.mamoe.mirai.mock.internal.contact
 
 import kotlinx.coroutines.cancel
 import net.mamoe.mirai.contact.*
+import net.mamoe.mirai.contact.file.RemoteFiles
 import net.mamoe.mirai.data.MemberInfo
 import net.mamoe.mirai.event.broadcast
 import net.mamoe.mirai.event.events.*
@@ -205,9 +206,13 @@ internal class MockGroupImpl(
         return true
     }
 
+    @Suppress("OverridingDeprecatedMember", "DEPRECATION")
     override val filesRoot: RemoteFile by lazy {
         MockRemoteFileRoot(this)
     }
+
+    override val files: RemoteFiles
+        get() = TODO("Not yet implemented")
 
     override suspend fun uploadAudio(resource: ExternalResource): OfflineAudio =
         resource.mockUploadAudio(bot)
