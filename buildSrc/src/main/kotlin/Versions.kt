@@ -20,21 +20,21 @@ object Versions {
     const val console = project
     const val consoleTerminal = project
 
-    const val kotlinCompiler = "1.5.30"
-    const val kotlinStdlib = "1.5.30"
+    const val kotlinCompiler = "1.6.0"
+    const val kotlinStdlib = kotlinCompiler
     const val dokka = "1.4.32"
 
-    const val coroutines = "1.5.1"
-    const val atomicFU = "0.16.3"
+    const val coroutines = "1.5.2"
+    const val atomicFU = "0.17.0"
     const val serialization = "1.2.2"
-    const val ktor = "1.5.4"
+    const val ktor = "1.6.5"
 
     const val binaryValidator = "0.4.0"
 
     const val io = "0.1.16"
     const val coroutinesIo = "0.1.16"
 
-    const val blockingBridge = "1.10.6-1530.2"
+    const val blockingBridge = "1.10.6-160.1"
 
     const val androidGradlePlugin = "4.1.1"
     const val android = "4.1.1.4"
