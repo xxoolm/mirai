@@ -15,10 +15,10 @@ jobs:
       - name: Checkout submodules
         run: git submodule update --init --recursive
 
-      - name: Set up JDK 1.8
+      - name: Set up JDK
         uses: actions/setup-java@v1
         with:
-          java-version: 1.8
+          java-version: 17
 
       - name: chmod -R 777 *
         run: chmod -R 777 *
