@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2021 Mamoe Technologies and contributors.
+ * Copyright 2019-2023 Mamoe Technologies and contributors.
  *
  * 此源代码的使用受 GNU AFFERO GENERAL PUBLIC LICENSE version 3 许可证的约束, 可以在以下链接找到该许可证.
  * Use of this source code is governed by the GNU AGPLv3 license that can be found through the following link.
@@ -14,54 +14,97 @@
     "EXPERIMENTAL_API_USAGE",
     "unused",
     "UnusedImport",
-    "DEPRECATION_ERROR", "NOTHING_TO_INLINE", "MemberVisibilityCanBePrivate"
+    "DEPRECATION_ERROR", "MemberVisibilityCanBePrivate"
 )
 
 package net.mamoe.mirai.message.data
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.buildClassSerialDescriptor
-import net.mamoe.kjbb.JvmBlockingBridge
+import kotlinx.serialization.encoding.CompositeDecoder
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.encoding.decodeStructure
+import me.him188.kotlin.jvm.blocking.bridge.JvmBlockingBridge
 import net.mamoe.mirai.Bot
 import net.mamoe.mirai.IMirai
 import net.mamoe.mirai.Mirai
 import net.mamoe.mirai.contact.Contact
-import net.mamoe.mirai.contact.Contact.Companion.sendImage
 import net.mamoe.mirai.contact.Contact.Companion.uploadImage
+import net.mamoe.mirai.event.events.MessageEvent
 import net.mamoe.mirai.message.code.CodableMessage
+import net.mamoe.mirai.message.data.Image.Builder
 import net.mamoe.mirai.message.data.Image.Key.IMAGE_ID_REGEX
 import net.mamoe.mirai.message.data.Image.Key.IMAGE_RESOURCE_ID_REGEX_1
 import net.mamoe.mirai.message.data.Image.Key.IMAGE_RESOURCE_ID_REGEX_2
+import net.mamoe.mirai.message.data.Image.Key.isUploaded
 import net.mamoe.mirai.message.data.Image.Key.queryUrl
+import net.mamoe.mirai.message.data.visitor.MessageVisitor
 import net.mamoe.mirai.utils.*
-import net.mamoe.mirai.utils.ExternalResource.Companion.sendAsImageTo
 import net.mamoe.mirai.utils.ExternalResource.Companion.uploadAsImage
-import kotlin.LazyThreadSafetyMode.NONE
 
 /**
  * 自定义表情 (收藏的表情) 和普通图片.
  *
  *
  * 最推荐的存储方式是存储图片原文件, 每次发送图片时都使用文件上传.
- * 在上传时服务器会根据其缓存情况回复已有的图片 ID 或要求客户端上传. 详见 [Contact.uploadImage]
+ * 在上传时服务器会根据其缓存情况回复已有的图片 ID 或要求客户端上传.
  *
- * ### 根据 ID 构造图片
- * - [Image.fromId]. 在 Kotlin, 更推荐使用顶层函数 `val image = Image("id")`
+ * # 获取 [Image] 实例
  *
- * ### 上传和发送图片
- * - [Contact.uploadImage] 上传 [资源文件][ExternalResource] 并得到 [Image] 消息
- * - [Contact.sendImage] 上传 [资源文件][ExternalResource] 并发送返回的 [Image] 作为一条消息
+ * ## 根据 ID 构造图片
  *
- * - [ExternalResource.uploadAsImage]
- * - [ExternalResource.sendAsImageTo]
- * - [Contact.sendImage]
+ * ID 格式查看 [Image.imageId]. 通过 ID 构造的图片若未存在于服务器中, 发送后在客户端将不能正常显示. 可通过 [Image.isUploaded] 检查图片是否存在于服务器.
+ * [Image.isUploaded] 需要除了 ID 以外其他参数, 如 [width], [size] 等, 因此不建议通过 ID 构造图片, 而是使用 [Builder] 构建, 以提供详细参数.
  *
- * ### 下载图片
- * - [Image.queryUrl] 扩展函数. 查询图片下载链接
- * - [IMirai.queryImageUrl] 查询图片下载链接 (Java 使用)
+ * 使用 [Image.fromId]. 在 Kotlin, 也可以使用顶层函数 `val image = Image("id")`.
+ *
+ * ### 在 Kotlin 通过 ID 构造图片
+ * ```
+ * // 根据喜好选择
+ * val image = Image.fromId("id")
+ * val image2 = Image("id")
+ * ```
+ *
+ * ### 在 Java 通过 ID 构造图片
+ * ```java
+ * Image image = Image.fromId("id")
+ * ```
+ *
+ * ## 使用 [Builder] 构建图片
+ *
+ * [Image] 提供 [Builder] 构建方式, 可以指定 [width], [height] 等额外参数. 请尽可能提供这些参数以提升图片发送的成功率和 [Image.isUploaded] 的准确性.
+ *
+ * ## 上传图片资源获得 [Image]
+ *
+ * 使用 [Contact.uploadImage], 将 [ExternalResource] 上传得到 [Image].
+ *
+ * 也可以使用 [ExternalResource.uploadAsImage] 扩展.
+ *
+ * # 发送图片消息
+ *
+ * 在获取实例后, 将图片元素连接到[消息链][MessageChain]即可发送. 图片可以与[纯文本][PlainText]等其他 [MessageContent] 混合使用 (在同一[消息链][MessageChain]中).
+ *
+ * # 下载图片
+ *
+ * 通过[事件][MessageEvent]等方式获取到 [Image] 实例后, 使用 [Image.queryUrl] 查询得到图片的下载地址, 自行使用 HTTP 客户端下载.
+ *
+ * # 其他查询
+ *
+ * ## 查询图片是否已存在于服务器
+ *
+ * 使用 [Image.isUploaded]. 当图片在服务器上存在时返回 `true`, 这意味着图片可以直接发送.
+ *
+ * 服务器通过 [Image.md5] 鉴别图片. 当图片已经存在于服务器时, [Contact.uploadImage] 会更快返回 (仍然需要进行网络请求), 不会上传图片数据.
+ *
+ * ## 检测图片 ID 合法性
+ *
+ * 使用 [Image.IMAGE_ID_REGEX].
  *
  * ## mirai 码支持
  * 格式: &#91;mirai:image:*[Image.imageId]*&#93;
@@ -69,10 +112,10 @@ import kotlin.LazyThreadSafetyMode.NONE
  * @see FlashImage 闪照
  * @see Image.flash 转换普通图片为闪照
  */
+@Suppress("DEPRECATION", "DEPRECATION_ERROR")
 @Serializable(Image.Serializer::class)
 @NotStableForInheritance
 public interface Image : Message, MessageContent, CodableMessage {
-
     /**
      * 图片的 id.
      *
@@ -131,24 +174,102 @@ public interface Image : Message, MessageContent, CodableMessage {
      */ // was an extension on Image before 2.9.0-M1.
     public val md5: ByteArray get() = calculateImageMd5ByImageId(imageId)
 
+    @MiraiInternalApi
+    override fun <D, R> accept(visitor: MessageVisitor<D, R>, data: D): R {
+        return visitor.visitImage(this, data)
+    }
+
     public object AsStringSerializer : KSerializer<Image> by String.serializer().mapPrimitive(
         SERIAL_NAME,
         serialize = { imageId },
         deserialize = { Image(it) },
     )
 
-    public object Serializer : KSerializer<Image> by FallbackSerializer("Image")
+    @OptIn(MiraiInternalApi::class)
+    @Deprecated(
+        message = "For internal use only. Deprecated for removal. Please retrieve serializer from MessageSerializers.serializersModule.",
+        level = DeprecationLevel.WARNING
+    )
+    @DeprecatedSinceMirai(warningSince = "2.13") // error since 2.15, hidden since 2.16
+    public object Serializer : KSerializer<Image> by FallbackSerializer(SERIAL_NAME)
 
+    // move to mirai-core in 2.16. Delegate Serializer to the implementation from MessageSerializers.
     @MiraiInternalApi
-    public open class FallbackSerializer(serialName: String) : KSerializer<Image> by Delegate.serializer().map(
-        buildClassSerialDescriptor(serialName) { element("imageId", String.serializer().descriptor) },
-        serialize = { Delegate(imageId) },
-        deserialize = { Image(imageId) },
-    ) {
+    public open class FallbackSerializer(serialName: String) : KSerializer<Image> {
+        override val descriptor: SerialDescriptor = buildClassSerialDescriptor(serialName) {
+            element("imageId", String.serializer().descriptor)
+            element("size", Long.serializer().descriptor)
+            element("imageType", ImageType.serializer().descriptor)
+            element("width", Int.serializer().descriptor)
+            element("height", Int.serializer().descriptor)
+            element("isEmoji", Boolean.serializer().descriptor)
+        }
+
+        // Note: Manually written to overcome discriminator issues.
+        // Without this implementation you will need `ignoreUnknownKeys` on deserialization.
+        override fun deserialize(decoder: Decoder): Image {
+            return decoder.decodeStructure(descriptor) {
+                @OptIn(ExperimentalSerializationApi::class)
+                if (runCatching { this.decodeSequentially() }.getOrElse { false }) {
+                    val imageId = this.decodeStringElement(descriptor, 0)
+                    val size = this.decodeLongElement(descriptor, 1)
+                    val type = this.decodeSerializableElement(descriptor, 2, ImageType.serializer())
+                    val width = this.decodeIntElement(descriptor, 3)
+                    val height = this.decodeIntElement(descriptor, 4)
+                    val isEmoji = this.decodeBooleanElement(descriptor, 5)
+                    return@decodeStructure Image(imageId) {
+                        this.size = size
+                        this.type = type
+                        this.width = width
+                        this.height = height
+                        this.isEmoji = isEmoji
+                    }
+                } else {
+                    return@decodeStructure Image("") {
+                        while (true) {
+                            when (val index = this@decodeStructure.decodeElementIndex(descriptor)) {
+                                0 -> imageId = this@decodeStructure.decodeStringElement(descriptor, index)
+                                1 -> size = this@decodeStructure.decodeLongElement(descriptor, index)
+                                2 -> type = this@decodeStructure.decodeSerializableElement(
+                                    descriptor,
+                                    index,
+                                    ImageType.serializer()
+                                )
+
+                                3 -> width = this@decodeStructure.decodeIntElement(descriptor, index)
+                                4 -> height = this@decodeStructure.decodeIntElement(descriptor, index)
+                                5 -> isEmoji = this@decodeStructure.decodeBooleanElement(descriptor, index)
+                                CompositeDecoder.DECODE_DONE -> break
+                            }
+                        }
+                        check(imageId.isNotEmpty()) { "imageId must not empty" }
+                    }
+                }
+            }
+        }
+
+        override fun serialize(encoder: Encoder, value: Image) {
+            Delegate.serializer().serialize(
+                encoder, Delegate(
+                    value.imageId,
+                    value.size,
+                    value.imageType,
+                    value.width,
+                    value.height,
+                    value.isEmoji
+                )
+            )
+        }
+
         @SerialName(SERIAL_NAME)
         @Serializable
-        internal data class Delegate(
-            val imageId: String
+        private data class Delegate(
+            val imageId: String,
+            val size: Long,
+            val imageType: ImageType,
+            val width: Int,
+            val height: Int,
+            val isEmoji: Boolean
         )
     }
 
@@ -175,7 +296,7 @@ public interface Image : Message, MessageContent, CodableMessage {
         public var imageId: String,
     ) {
         /**
-         * 图片大小字节数. 如果不提供改属性, 将无法 [Image.Key.isUploaded]
+         * 图片大小字节数. 如果不提供该属性, 将无法 [Image.Key.isUploaded]
          *
          * @see Image.size
          */
@@ -185,7 +306,6 @@ public interface Image : Message, MessageContent, CodableMessage {
          * @see Image.imageType
          */
         public var type: ImageType = ImageType.UNKNOWN
-
         /**
          * @see Image.width
          */
@@ -201,17 +321,21 @@ public interface Image : Message, MessageContent, CodableMessage {
          */
         public var isEmoji: Boolean = false
 
-        /**
-         * 使用当前参数构造 [Image].
-         */
-        public fun build(): Image = InternalImageProtocol.instance.createImage(
-            imageId = imageId,
-            size = size,
-            type = type,
-            width = width,
-            height = height,
-            isEmoji = isEmoji,
-        )
+
+        public fun build(): Image {
+            if (type == ImageType.UNKNOWN) {
+                type = ImageType.match(imageId.split(".").last())
+            }
+            @OptIn(MiraiInternalApi::class)
+            return InternalImageProtocol.instance.createImage(
+                imageId = imageId,
+                size = size,
+                type = type,
+                width = width,
+                height = height,
+                isEmoji = isEmoji,
+            )
+        }
 
         public companion object {
             /**
@@ -269,8 +393,10 @@ public interface Image : Message, MessageContent, CodableMessage {
          * @since 2.9.0
          */
         @JvmStatic
-        public suspend fun Image.isUploaded(bot: Bot): Boolean =
-            InternalImageProtocol.instance.isUploaded(bot, md5, size, null, imageType, width, height)
+        public suspend fun Image.isUploaded(bot: Bot): Boolean {
+            @OptIn(MiraiInternalApi::class)
+            return InternalImageProtocol.instance.isUploaded(bot, md5, size, null, imageType, width, height)
+        }
 
         /**
          * 当图片在服务器上存在时返回 `true`, 这意味着图片可以直接发送给 [contact].
@@ -287,7 +413,10 @@ public interface Image : Message, MessageContent, CodableMessage {
             bot: Bot,
             md5: ByteArray,
             size: Long,
-        ): Boolean = InternalImageProtocol.instance.isUploaded(bot, md5, size, null)
+        ): Boolean {
+            @OptIn(MiraiInternalApi::class)
+            return InternalImageProtocol.instance.isUploaded(bot, md5, size, null)
+        }
 
         /**
          * 由 [Image.imageId] 计算 [Image.md5].
@@ -295,7 +424,7 @@ public interface Image : Message, MessageContent, CodableMessage {
          * @since 2.9.0
          */
         public fun calculateImageMd5ByImageId(imageId: String): ByteArray {
-            @Suppress("DEPRECATION")
+            @OptIn(MiraiInternalApi::class)
             return when {
                 imageId matches IMAGE_ID_REGEX -> imageId.imageIdToMd5(1)
                 imageId matches IMAGE_RESOURCE_ID_REGEX_2 -> imageId.imageIdToMd5(imageId.skipToSecondHyphen() + 1)
@@ -355,7 +484,7 @@ public interface Image : Message, MessageContent, CodableMessage {
  * @see IMirai.createImage
  */
 @JvmSynthetic
-public inline fun Image(imageId: String): Image = Image.Builder.newBuilder(imageId).build()
+public fun Image(imageId: String): Image = Builder.newBuilder(imageId).build()
 
 /**
  * 使用 [Image.Builder] 构建一个 [Image].
@@ -364,9 +493,10 @@ public inline fun Image(imageId: String): Image = Image.Builder.newBuilder(image
  * @since 2.9.0
  */
 @JvmSynthetic
-public inline fun Image(imageId: String, builderAction: Image.Builder.() -> Unit = {}): Image =
-    Image.Builder.newBuilder(imageId).apply(builderAction).build()
+public inline fun Image(imageId: String, builderAction: Builder.() -> Unit = {}): Image =
+    Builder.newBuilder(imageId).apply(builderAction).build()
 
+@Serializable
 public enum class ImageType(
     /**
      * @since 2.9.0
@@ -377,6 +507,7 @@ public enum class ImageType(
     BMP("bmp"),
     JPG("jpg"),
     GIF("gif"),
+
     //WEBP, //Unsupported by pc client
     APNG("png"),
     UNKNOWN("gif"); // bad design, should use `null` to represent unknown, but we cannot change it anymore.
@@ -405,70 +536,9 @@ public enum class ImageType(
 @Suppress("EXTENSION_SHADOWED_BY_MEMBER")
 @MiraiInternalApi
 @get:JvmName("calculateImageMd5")
+@DeprecatedSinceMirai(hiddenSince = "2.9")
 public val Image.md5: ByteArray
     get() = Image.calculateImageMd5ByImageId(imageId)
-
-
-/**
- * 所有 [Image] 实现的基类.
- */
-@MiraiInternalApi
-public sealed class AbstractImage : Image {
-    private val _stringValue: String? by lazy(NONE) { "[mirai:image:$imageId]" }
-
-    override val size: Long
-        get() = 0L
-    override val width: Int
-        get() = 0
-    override val height: Int
-        get() = 0
-    override val imageType: ImageType
-        get() = ImageType.UNKNOWN
-
-    final override fun toString(): String = _stringValue!!
-    final override fun contentToString(): String = if (isEmoji) {
-        "[动画表情]"
-    } else {
-        "[图片]"
-    }
-
-    override fun appendMiraiCodeTo(builder: StringBuilder) {
-        builder.append("[mirai:image:").append(imageId).append("]")
-    }
-
-    final override fun hashCode(): Int = imageId.hashCode()
-    final override fun equals(other: Any?): Boolean {
-        if (other === this) return true
-        if (other !is Image) return false
-        return this.imageId == other.imageId
-    }
-}
-
-
-/**
- * 好友图片
- *
- * [imageId] 形如 `/f8f1ab55-bf8e-4236-b55e-955848d7069f` (37 长度)  或 `/000000000-3814297509-BFB7027B9354B8F899A062061D74E206` (54 长度)
- */
-// NotOnlineImage
-@MiraiInternalApi
-public abstract class FriendImage @MiraiInternalApi public constructor() :
-    AbstractImage() { // change to sealed in the future.
-    public companion object
-}
-
-/**
- * 群图片.
- *
- * @property imageId 形如 `{01E9451B-70ED-EAE3-B37C-101F1EEBF5B5}.ext` (ext系扩展名)
- * @see Image 查看更多说明
- */
-// CustomFace
-@MiraiInternalApi
-public abstract class GroupImage @MiraiInternalApi public constructor() :
-    AbstractImage() { // change to sealed in the future.
-    public companion object
-}
 
 
 /**
@@ -502,6 +572,7 @@ public interface InternalImageProtocol { // naming it Internal* to assign it a l
     @MiraiInternalApi
     public companion object {
         public val instance: InternalImageProtocol by lazy {
+            Mirai // initialize MiraiImpl first
             loadService(
                 InternalImageProtocol::class,
                 "net.mamoe.mirai.internal.message.InternalImageProtocolImpl"
